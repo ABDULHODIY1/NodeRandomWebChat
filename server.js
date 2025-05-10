@@ -15,13 +15,16 @@ io.on('connection', (socket) => {
 
   socket.on('ready', () => {
     if (waitingUsers.size > 0) {
-      const partnerId = Array.from(waitingUsers).find(id => id !== socket.id);
-      if (partnerId) {
+      // Set dan birinchi elementni olamiz
+      const partnerId = Array.from(waitingUsers)[0];
+      
+      if (partnerId && partnerId !== socket.id) {
         waitingUsers.delete(partnerId);
         socket.partnerId = partnerId;
         io.to(partnerId).emit('partner-found', socket.id);
         socket.emit('partner-found', partnerId);
       } else {
+        // O'zidan tashqari user yo'q bo'lsa, o'zini kutishga qo'sh
         waitingUsers.add(socket.id);
       }
     } else {
