@@ -13,17 +13,16 @@ const io = socketIo(server, {
 
 app.use(express.static('public'));
 
-const onlineUsers = new Set(); // All connected users
-const readyUsers = new Set(); // Users actively seeking matches
+// Track users actively seeking matches
+const readyUsers = new Set();
 
 io.on('connection', (socket) => {
   console.log(`User connected: ${socket.id}`);
-  onlineUsers.add(socket.id); // Add to online users
 
   // Handle readiness signal
   socket.on('ready', () => {
     readyUsers.add(socket.id); // Add to ready pool
-    findRandomPartner(socket); // Attempt to pair
+    findPartner(socket); // Attempt to pair
   });
 
   // Handle WebRTC signaling
@@ -39,17 +38,25 @@ io.on('connection', (socket) => {
     io.to(partnerId).emit('candidate', candidate);
   });
 
+  // Handle ending calls
+  socket.on('end-call', (partnerId) => {
+    if (partnerId) {
+      io.to(partnerId).emit('call-ended'); // Notify partner
+      readyUsers.delete(partnerId); // Remove from ready pool
+    }
+    readyUsers.delete(socket.id); // Remove self from ready pool
+  });
+
   // Handle disconnections
   socket.on('disconnect', () => {
-    onlineUsers.delete(socket.id); // Remove from online users
     readyUsers.delete(socket.id); // Remove from ready pool
     io.emit('user-disconnected', socket.id); // Notify others
   });
 });
 
-function findRandomPartner(socket) {
+function findPartner(socket) {
   const available = Array.from(readyUsers).filter(id => id !== socket.id);
-  
+
   if (!available.length) {
     socket.emit('no-partner'); // No partners available
     return;
@@ -57,7 +64,7 @@ function findRandomPartner(socket) {
 
   const partnerId = available[Math.floor(Math.random() * available.length)];
 
-  // Remove both users from ready pool to prevent immediate re-pairing
+  // Remove both from ready pool to prevent immediate re-pairing
   readyUsers.delete(socket.id);
   readyUsers.delete(partnerId);
 

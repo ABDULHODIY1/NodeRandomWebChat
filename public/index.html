@@ -7,8 +7,8 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css " />
   <style>
     body {
-      font-family: 'Arial', sans-serif;
-      background-color: #000;
+      font-family: Arial, sans-serif;
+      background: #000;
       display: flex;
       justify-content: center;
       align-items: center;
@@ -21,7 +21,7 @@
       background: #121212;
       padding: 20px;
       border-radius: 15px;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
       width: 90%;
       max-width: 600px;
       text-align: center;
@@ -75,33 +75,33 @@
     }
 
     #cameraToggleBtn, #micToggleBtn {
-      background-color: #ff9800;
+      background: #ff9800;
     }
 
     #cameraToggleBtn:hover, #micToggleBtn:hover {
-      background-color: #e68a00;
+      background: #e68a00;
     }
 
     #startBtn {
-      background-color: #28a745;
+      background: #28a745;
     }
 
     #startBtn:hover {
-      background-color: #218838;
+      background: #218838;
     }
 
     #nextBtn {
-      background-color: #007bff;
+      background: #007bff;
       display: none;
     }
 
     #nextBtn:hover {
-      background-color: #0056b3;
+      background: #0056b3;
     }
 
     #status {
       margin-top: 10px;
-      background: rgba(0, 0, 0, 0.7);
+      background: rgba(0,0,0,0.7);
       padding: 10px;
       border-radius: 10px;
       display: none;
@@ -158,7 +158,7 @@
         localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         localVideo.srcObject = localStream;
         toggleButtons();
-        socket.emit('ready'); // Signal readiness to server
+        socket.emit('ready'); // Signal readiness
       } catch (err) {
         alert("Kamera yoki mikrofonga ruxsat berilmagan!");
         console.error(err);
@@ -270,7 +270,16 @@
       nextBtn.style.display = 'none';
       statusDiv.textContent = 'Finding partner...';
       statusDiv.style.display = 'block';
+      socket.emit('end-call', partnerId); // Notify server to end call
       socket.emit('ready'); // Re-enter matchmaking pool
+    });
+
+    socket.on('call-ended', () => {
+      statusDiv.textContent = 'Call ended by partner';
+      setTimeout(() => {
+        statusDiv.textContent = 'Finding partner...';
+        socket.emit('ready'); // Re-enter matchmaking pool
+      }, 2000);
     });
   </script>
 </body>
