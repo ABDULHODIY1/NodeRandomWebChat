@@ -3,7 +3,7 @@ services:
     name: random-video-chat
     env: node
     plan: free
-    buildCommand: npm install
+    buildCommand: npm install/yarn
     startCommand: node server.js
     rootDir: .
     envVars:
