@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Video Chat</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css " />
   <style>
     body {
       font-family: 'Arial', sans-serif;
@@ -158,7 +158,7 @@
         localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         localVideo.srcObject = localStream;
         toggleButtons();
-        socket.emit('ready');
+        socket.emit('ready'); // Signal readiness to server
       } catch (err) {
         alert("Kamera yoki mikrofonga ruxsat berilmagan!");
         console.error(err);
@@ -270,7 +270,7 @@
       nextBtn.style.display = 'none';
       statusDiv.textContent = 'Finding partner...';
       statusDiv.style.display = 'block';
-      socket.emit('ready');
+      socket.emit('ready'); // Re-enter matchmaking pool
     });
   </script>
 </body>
