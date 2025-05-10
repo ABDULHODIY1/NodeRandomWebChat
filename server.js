@@ -1,21 +1,21 @@
 const express = require('express');
 const http = require('http');
-const { Server } = require('socket.io');
+const { app, Server } = require('socket.io');
 
-const app = express();
-const server = http.createServer(app);
-const io = new Server(server);
+const serverApp = express();
+const httpServer = http.createServer(serverApp);
+const io = new Server(httpServer);
 
-// Frontend fayllar uchun static papka
-app.use(express.static(__dirname + '/public'));
+// Frontend papkani static sifatida yuklash
+serverApp.use(express.static(__dirname + '/public'));
 
-// Juftlash uchun kutayotgan userlarni saqlash
+// Juftlash uchun kutayotgan userlar
 const waitingUsers = new Set();
 
 io.on('connection', (socket) => {
-  console.log('User connected:', socket.id);
+  console.log('Yangi user ulandi:', socket.id);
 
-  // Foydalanuvchi tayyor ekanligini bildirish
+  // Foydalanuvchi tayyor ekanligini bildiradi
   socket.on('ready', () => {
     if (waitingUsers.size > 0) {
       const partnerId = Array.from(waitingUsers)[0];
@@ -49,7 +49,7 @@ io.on('connection', (socket) => {
     io.to(partnerId).emit('candidate', candidate);
   });
 
-  // Chaqiruvni tugatish
+  // Chaqiruv tugaganligi haqida xabar
   socket.on('end-call', (partnerId) => {
     io.to(partnerId).emit('call-ended');
     waitingUsers.add(partnerId);
@@ -57,7 +57,7 @@ io.on('connection', (socket) => {
 
   // Ulanish uzilganda
   socket.on('disconnect', () => {
-    console.log('User disconnected:', socket.id);
+    console.log('User uzildi:', socket.id);
     waitingUsers.delete(socket.id);
     if (socket.partnerId) {
       io.to(socket.partnerId).emit('call-ended');
@@ -66,8 +66,8 @@ io.on('connection', (socket) => {
   });
 });
 
-// Server ishga tushishi
+// Port sozlamalari
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
+httpServer.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });

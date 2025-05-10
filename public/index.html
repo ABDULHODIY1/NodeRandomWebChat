@@ -1,160 +1,94 @@
 <!DOCTYPE html>
-<html lang="uz">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Video Chat</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css "/>
+  <title>Random Video Chat</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
+      margin: 0;
       background: #000;
+      color: white;
+      font-family: sans-serif;
       display: flex;
       justify-content: center;
       align-items: center;
       height: 100vh;
-      margin: 0;
-      color: #fff;
+      flex-direction: column;
     }
-
-    .chat-container {
-      background: #121212;
-      padding: 20px;
-      border-radius: 15px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-      width: 90%;
-      max-width: 600px;
-      text-align: center;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .video-grid {
-      display: grid;
-      grid-template-rows: 1fr 1fr;
+    .videos {
+      display: flex;
       gap: 20px;
-      position: relative;
+      margin-bottom: 20px;
     }
-
     video {
-      width: 100%;
-      height: 100%;
+      width: 200px;
       border-radius: 10px;
-      object-fit: cover;
+      background: #111;
     }
-
-    .main-controls {
-      display: flex;
-      justify-content: center;
-      gap: 10px;
-      margin-top: 20px;
-    }
-
     button {
-      padding: 10px;
+      padding: 10px 20px;
       font-size: 16px;
-      cursor: pointer;
       border: none;
-      border-radius: 50%;
-      transition: background-color 0.3s;
-      color: white;
-      width: 45px;
-      height: 45px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      border-radius: 5px;
+      cursor: pointer;
     }
-
-    #cameraToggleBtn, #micToggleBtn {
-      background: #ff9800;
-    }
-
-    #startBtn {
-      background: #28a745;
-    }
-
-    #nextBtn {
-      background: #007bff;
-      display: none;
-    }
-
-    #status {
-      margin-top: 10px;
-      background: rgba(0,0,0,0.7);
-      padding: 10px;
-      border-radius: 10px;
-      display: none;
-    }
+    #startBtn { background: green; color: white; }
+    #nextBtn { background: blue; color: white; display: none; }
   </style>
 </head>
 <body>
-  <div class="chat-container">
-    <div class="video-grid">
-      <video id="remoteVideo" autoplay playsinline></video>
-      <video id="localVideo" autoplay playsinline muted></video>
-    </div>
-    <div class="main-controls">
-      <button id="startBtn"><i class="fas fa-play"></i></button>
-      <button id="nextBtn"><i class="fas fa-forward"></i></button>
-      <button id="cameraToggleBtn"><i class="fas fa-video"></i></button>
-      <button id="micToggleBtn"><i class="fas fa-microphone"></i></button>
-    </div>
-    <div id="status">Finding partner...</div>
+  <div class="videos">
+    <video id="localVideo" autoplay muted></video>
+    <video id="remoteVideo" autoplay></video>
   </div>
 
-  <!-- Scriptlar -->
-  <script src="https://webrtc.github.io/adapter/adapter-latest.js "></script>
+  <button id="startBtn">Start</button>
+  <button id="nextBtn">Next</button>
+
   <script src="/socket.io/socket.io.js"></script>
+  <script src="https://webrtc.github.io/adapter/adapter-latest.js "></script>
   <script>
     const socket = io();
 
-    const startBtn = document.getElementById('startBtn');
-    const nextBtn = document.getElementById('nextBtn');
-    const cameraToggleBtn = document.getElementById('cameraToggleBtn');
-    const micToggleBtn = document.getElementById('micToggleBtn');
-    const localVideo = document.getElementById('localVideo');
-    const remoteVideo = document.getElementById('remoteVideo');
-    const statusDiv = document.getElementById('status');
+    const startBtn = document.getElementById("startBtn");
+    const nextBtn = document.getElementById("nextBtn");
+    const localVideo = document.getElementById("localVideo");
+    const remoteVideo = document.getElementById("remoteVideo");
 
     let localStream;
     let peerConnection;
-    let cameraEnabled = true;
-    let micEnabled = true;
     let partnerId;
 
     const iceServers = {
       iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' },
-        { urls: 'stun:stun2.l.google.com:19302' },
-        { urls: 'stun:stun3.l.google.com:19302' },
-        { urls: 'stun:stun4.l.google.com:19302' },
-      ],
+        { urls: 'stun:stun1.l.google.com:19302' }
+      ]
     };
 
     async function startCamera() {
       try {
         localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         localVideo.srcObject = localStream;
-        toggleButtons();
-        socket.emit('ready'); // Serverga "tayyor" degan xabar
-      } catch (err) {
-        alert("Kamera yoki mikrofonga ruxsat berilmagan!");
-        console.error(err);
+        socket.emit('ready');
+      } catch (e) {
+        alert("Kamera/mikrofon ruxsati berilmadi!");
+        console.error(e);
       }
     }
 
     function createPeerConnection() {
       peerConnection = new RTCPeerConnection(iceServers);
 
-      peerConnection.onicecandidate = event => {
-        if (event.candidate) {
-          socket.emit('candidate', event.candidate, partnerId);
+      peerConnection.onicecandidate = e => {
+        if (e.candidate) {
+          socket.emit('candidate', e.candidate, partnerId);
         }
       };
 
-      peerConnection.ontrack = event => {
-        remoteVideo.srcObject = event.streams[0];
+      peerConnection.ontrack = e => {
+        remoteVideo.srcObject = e.streams[0];
       };
 
       localStream.getTracks().forEach(track => {
@@ -165,97 +99,54 @@
     function createOffer() {
       peerConnection.createOffer()
         .then(offer => peerConnection.setLocalDescription(offer))
-        .then(() => socket.emit('offer', peerConnection.localDescription, partnerId))
-        .catch(console.error);
+        .then(() => socket.emit('offer', peerConnection.localDescription, partnerId));
     }
 
-    function createAnswer() {
-      peerConnection.createAnswer()
-        .then(answer => peerConnection.setLocalDescription(answer))
-        .then(() => socket.emit('answer', peerConnection.localDescription))
-        .catch(console.error);
+    function createAnswer(answer) {
+      peerConnection.setRemoteDescription(new RTCSessionDescription(answer))
+        .then(() => peerConnection.createAnswer())
+        .then(ans => peerConnection.setLocalDescription(ans))
+        .then(() => socket.emit('answer', peerConnection.localDescription));
     }
 
-    startBtn.addEventListener('click', async () => {
-      await startCamera();
-      statusDiv.style.display = 'block';
-    });
+    startBtn.onclick = startCamera;
 
-    socket.on('partner-found', partner => {
-      partnerId = partner;
+    socket.on('partner-found', id => {
+      partnerId = id;
       createPeerConnection();
       createOffer();
-      statusDiv.style.display = 'none';
-      startBtn.style.display = 'none';
-      nextBtn.style.display = 'inline-block';
+      startBtn.style.display = "none";
+      nextBtn.style.display = "inline-block";
     });
 
-    socket.on('offer', (offer, senderId) => {
-      partnerId = senderId;
+    socket.on('offer', (offer, from) => {
+      partnerId = from;
       createPeerConnection();
-      peerConnection.setRemoteDescription(new RTCSessionDescription(offer))
-        .then(createAnswer)
-        .catch(console.error);
+      createAnswer(offer);
     });
 
     socket.on('answer', answer => {
-      peerConnection.setRemoteDescription(new RTCSessionDescription(answer))
-        .catch(console.error);
+      peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
     });
 
     socket.on('candidate', candidate => {
-      peerConnection.addIceCandidate(new RTCIceCandidate(candidate))
-        .catch(console.error);
+      peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
     });
 
     socket.on('call-ended', () => {
-      statusDiv.textContent = 'Call ended by partner';
-      setTimeout(() => {
-        statusDiv.textContent = 'Finding partner...';
-        socket.emit('ready');
-      }, 2000);
+      alert("Partner chiqib ketdi.");
+      location.reload();
     });
 
-    cameraToggleBtn.addEventListener('click', () => {
-      if (localStream) {
-        const videoTrack = localStream.getVideoTracks()[0];
-        if (videoTrack) {
-          videoTrack.enabled = !videoTrack.enabled;
-          cameraEnabled = videoTrack.enabled;
-          cameraToggleBtn.innerHTML = cameraEnabled ? '<i class="fas fa-video"></i>' : '<i class="fas fa-video-slash"></i>';
-        }
-      }
-    });
-
-    micToggleBtn.addEventListener('click', () => {
-      if (localStream) {
-        const audioTrack = localStream.getAudioTracks()[0];
-        if (audioTrack) {
-          audioTrack.enabled = !audioTrack.enabled;
-          micEnabled = audioTrack.enabled;
-          micToggleBtn.innerHTML = micEnabled ? '<i class="fas fa-microphone"></i>' : '<i class="fas fa-microphone-slash"></i>';
-        }
-      }
-    });
-
-    function toggleButtons() {
-      cameraToggleBtn.style.display = 'inline-block';
-      micToggleBtn.style.display = 'inline-block';
-    }
-
-    nextBtn.addEventListener('click', () => {
+    nextBtn.onclick = () => {
       if (peerConnection) {
         peerConnection.close();
         peerConnection = null;
       }
       remoteVideo.srcObject = null;
-      startBtn.style.display = 'inline-block';
-      nextBtn.style.display = 'none';
-      statusDiv.textContent = 'Finding partner...';
-      statusDiv.style.display = 'block';
       socket.emit('end-call', partnerId);
       socket.emit('ready');
-    });
+    };
   </script>
 </body>
 </html>
