@@ -2,9 +2,9 @@
 <html lang="uz">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Video Chat</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css " />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css "/>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -43,15 +43,6 @@
       object-fit: cover;
     }
 
-    .controls {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      display: flex;
-      gap: 10px;
-      z-index: 10;
-    }
-
     .main-controls {
       display: flex;
       justify-content: center;
@@ -78,25 +69,13 @@
       background: #ff9800;
     }
 
-    #cameraToggleBtn:hover, #micToggleBtn:hover {
-      background: #e68a00;
-    }
-
     #startBtn {
       background: #28a745;
-    }
-
-    #startBtn:hover {
-      background: #218838;
     }
 
     #nextBtn {
       background: #007bff;
       display: none;
-    }
-
-    #nextBtn:hover {
-      background: #0056b3;
     }
 
     #status {
@@ -123,6 +102,7 @@
     <div id="status">Finding partner...</div>
   </div>
 
+  <!-- Scriptlar -->
   <script src="https://webrtc.github.io/adapter/adapter-latest.js "></script>
   <script src="/socket.io/socket.io.js"></script>
   <script>
@@ -137,7 +117,6 @@
     const statusDiv = document.getElementById('status');
 
     let localStream;
-    let remoteStream;
     let peerConnection;
     let cameraEnabled = true;
     let micEnabled = true;
@@ -158,7 +137,7 @@
         localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         localVideo.srcObject = localStream;
         toggleButtons();
-        socket.emit('ready'); // Signal readiness
+        socket.emit('ready'); // Serverga "tayyor" degan xabar
       } catch (err) {
         alert("Kamera yoki mikrofonga ruxsat berilmagan!");
         console.error(err);
@@ -211,10 +190,6 @@
       nextBtn.style.display = 'inline-block';
     });
 
-    socket.on('no-partner', () => {
-      statusDiv.textContent = 'No available partners. Try again later.';
-    });
-
     socket.on('offer', (offer, senderId) => {
       partnerId = senderId;
       createPeerConnection();
@@ -231,6 +206,14 @@
     socket.on('candidate', candidate => {
       peerConnection.addIceCandidate(new RTCIceCandidate(candidate))
         .catch(console.error);
+    });
+
+    socket.on('call-ended', () => {
+      statusDiv.textContent = 'Call ended by partner';
+      setTimeout(() => {
+        statusDiv.textContent = 'Finding partner...';
+        socket.emit('ready');
+      }, 2000);
     });
 
     cameraToggleBtn.addEventListener('click', () => {
@@ -270,16 +253,8 @@
       nextBtn.style.display = 'none';
       statusDiv.textContent = 'Finding partner...';
       statusDiv.style.display = 'block';
-      socket.emit('end-call', partnerId); // Notify server to end call
-      socket.emit('ready'); // Re-enter matchmaking pool
-    });
-
-    socket.on('call-ended', () => {
-      statusDiv.textContent = 'Call ended by partner';
-      setTimeout(() => {
-        statusDiv.textContent = 'Finding partner...';
-        socket.emit('ready'); // Re-enter matchmaking pool
-      }, 2000);
+      socket.emit('end-call', partnerId);
+      socket.emit('ready');
     });
   </script>
 </body>

@@ -1,30 +1,30 @@
-// server.js
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
+
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-app.use(express.static(__dirname + '/public')); // Frontend fayllar joylashgan katalog
+// Frontend fayllar uchun static papka
+app.use(express.static(__dirname + '/public'));
 
+// Juftlash uchun kutayotgan userlarni saqlash
 const waitingUsers = new Set();
 
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
 
+  // Foydalanuvchi tayyor ekanligini bildirish
   socket.on('ready', () => {
     if (waitingUsers.size > 0) {
-      // Set dan birinchi elementni olamiz
       const partnerId = Array.from(waitingUsers)[0];
-      
       if (partnerId && partnerId !== socket.id) {
         waitingUsers.delete(partnerId);
         socket.partnerId = partnerId;
         io.to(partnerId).emit('partner-found', socket.id);
         socket.emit('partner-found', partnerId);
       } else {
-        // O'zidan tashqari user yo'q bo'lsa, o'zini kutishga qo'sh
         waitingUsers.add(socket.id);
       }
     } else {
@@ -32,23 +32,30 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Offer jo'natish
   socket.on('offer', (offer, partnerId) => {
     io.to(partnerId).emit('offer', offer, socket.id);
   });
 
+  // Answer jo'natish
   socket.on('answer', (answer) => {
-    io.to(socket.partnerId).emit('answer', answer);
+    if (socket.partnerId) {
+      io.to(socket.partnerId).emit('answer', answer);
+    }
   });
 
+  // ICE candidate jo'natish
   socket.on('candidate', (candidate, partnerId) => {
     io.to(partnerId).emit('candidate', candidate);
   });
 
+  // Chaqiruvni tugatish
   socket.on('end-call', (partnerId) => {
     io.to(partnerId).emit('call-ended');
     waitingUsers.add(partnerId);
   });
 
+  // Ulanish uzilganda
   socket.on('disconnect', () => {
     console.log('User disconnected:', socket.id);
     waitingUsers.delete(socket.id);
@@ -59,6 +66,8 @@ io.on('connection', (socket) => {
   });
 });
 
-server.listen(3000, () => {
-  console.log('Server is running on http://localhost:3000');
+// Server ishga tushishi
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+  console.log(`Server is running on http://localhost:${PORT}`);
 });
